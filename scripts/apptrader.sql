@@ -133,6 +133,29 @@ ORDER BY appname;
     
 -- - App store ratings should be calculated by taking the average of the scores from both app stores and rounding to the nearest 0.5.
 
+WITH appunion AS
+(SELECT 'appstore' AS system, TRIM(name) AS appname, rating,
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM app_store_apps
+UNION 
+SELECT 'playstore' AS system, TRIM(name) AS appname, rating,
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM play_store_apps)
+SELECT appname,  
+	MAX(purchase_price) AS max_cost, 
+	CAST(COUNT(appname)*5000 AS MONEY) AS monthly_income,
+	CAST (1000 AS MONEY) AS monthly_cost,
+	(CAST(COUNT(appname)*5000 AS MONEY)) - (CAST (1000 AS MONEY)) AS net,
+	(MAX(rating * 2)+1) AS app_rating_life
+FROM appunion
+GROUP BY appname
+ORDER BY appname;
+
+SELECT rating
+FROM play_store_apps;
+
 -- e. App Trader would prefer to work with apps that are available in both the App Store and the Play Store since they can market both for the same $1000 per month.
 
 
