@@ -19,9 +19,7 @@
 --     - `app_store_apps` with 7197 rows  
 --     - `play_store_apps` with 10840 rows
 
--- #### 2. Assumptions
 
--- Based on research completed prior to launching App Trader as a company, you can assume the following:
 
 SELECT * 
 FROM app_store_apps;
@@ -166,14 +164,42 @@ ORDER BY avg_app_price DESC;
 -- "Games"			1.43
 -- "Tools"			0.29
 
+WITH one AS 
+(
+	SELECT
+		name, 
+		CAST(price AS MONEY) as price,
+		primary_genre,
+		rating
+	FROM app_store_apps
+	WHERE rating IS NOT NULL
+UNION
+	SELECT
+		name,
+		CAST(price AS MONEY) as price,
+		genres,
+		rating
+	FROM play_store_apps
+	WHERE rating IS NOT NULL
+)
+SELECT
+	primary_genre,
+	ROUND(AVG(rating),1) AS avg_rating
+FROM one
+WHERE primary_genre IN 
+	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
+GROUP BY primary_genre
+ORDER BY avg_rating DESC;
+----------OUTPUT---------
+-- "Productivity"	4.1
+-- "Tools"			4.0
+-- "Education"		3.8
+-- "Games"			3.7
+-- "Entertainment"	3.6
+-- THE BEST RATED APPS FALL INTO THE PRODUCTIVITY AND TOOLS GENRES
+
 												----------CONCLUSIONS----------
 -- Our top genres have a low price on avg. We should focus on purchasing apps within these genres because they are numerous, are well rated, and have a low price point.
-
-
-
-
-
-
 
 
 
@@ -183,7 +209,12 @@ CASE WHEN price <= '$1.00' THEN '$10,000.00'
 ELSE (price * 10000) END AS cost
 
 
+----------NEXT STEP IS TO TRY AND COMPARE PRICES BETWEEN APP STORES AND CALCULATE THE COST PER APP----------
 
+
+-- #### 2. Assumptions
+
+-- Based on research completed prior to launching App Trader as a company, you can assume the following:
 
 -- a. App Trader will purchase apps for 10,000 times the price of the app. For apps that are priced from free up to $1.00, the purchase price is $10,000.
     
