@@ -38,6 +38,9 @@ FROM app_store_apps;\
 --OUTPUT there are 36 distinct prices in the app_store
 --Both of these outputs was needed to begin building a query piece by piece
 
+
+------FIRST CTE TO UNION BOTH TABLES-------
+WITH firstun as ( 
 SELECT 
 	name,
 	CAST(price AS MONEY),
@@ -47,19 +50,21 @@ FROM app_store_apps
 WHERE rating IS NOT NULL
 UNION 
 SELECT 
-name,
+	name,
 	CAST(price AS MONEY),
 	rating,
 	content_rating
 FROM play_store_apps
 WHERE rating IS NOT NULL
-ORDER BY price, rating DESC;
+ORDER BY price, rating DESC;)
 -- --output 
 -- "FK Dedinje BGD"	"$0.00"	5.0	"Everyone"
 -- "Awake Dating"	"$0.00"	5.0	"Mature 17+"
 -- "UP EB Bill Payment & Details"	"$0.00"	5.0	"Teen"
 -- "BI News"	"$0.00"	5.0	"Everyone"
 -- "Railroad Radio Vancouver BC"	"$0.00"	5.0	"Teen"
+
+-----FIND TOP RATED CONTENT RATINGS PER STORE-----
 
 SELECT 
 	DISTINCT content_rating,
@@ -93,6 +98,38 @@ LIMIT 10;
 -- "Teen"	"playstore"	5.0
 -- "Mature 17+"	"playstore"	4.9
 
+-----2nd CTE TO UNION BOTH TABLES -----
+WITH second_cte AS (
+SELECT 
+	name, 
+	CAST(price AS MONEY),
+	primary_genre,
+	rating
+FROM app_store_apps
+WHERE rating IS NOT NULL
+UNION
+SELECT
+	name,
+	CAST(price AS MONEY),
+	genres,
+	rating
+FROM play_store_apps
+WHERE rating IS NOT NULL
+ORDER BY price, rating DESC
+)
+-----SELECTING FROM THE 2ND UNION-----
+SELECT 
+	primary_genre,
+	ROUND(AVG(rating),1),
+	COUNT(name) as app_count
+	CASE WHEN CAST(price AS MONEY) <= '$1' THEN '$10,000'
+	WHEN CAST(price AS MONEY)
+FROM second_cte
+GROUP BY primary_genre, rating
+ORDER BY rating DESC, app_count DESC;
+
+	
+
 
 -- a. App Trader will purchase apps for 10,000 times the price of the app. For apps that are priced from free up to $1.00, the purchase price is $10,000.
     
@@ -115,6 +152,23 @@ LIMIT 10;
 -- d. For every half point that an app gains in rating, its projected lifespan increases by one year. In other words, an app with a rating of 0 can be expected to be in use for 1 year, an app with a rating of 1.0 can be expected to last 3 years, and an app with a rating of 4.0 can be expected to last 9 years.
     
 -- - App store ratings should be calculated by taking the average of the scores from both app stores and rounding to the nearest 0.5.
+
+SELECT 
+	'appstore' as system,
+	ROUND(AVG(rating),1)
+FROM app_store_apps
+WHERE rating IS NOT NULL
+UNION 
+SELECT 
+	'playstore' as system,
+	ROUND(AVG(rating),1)
+FROM play_store_apps
+WHERE rating IS NOT NULL;
+
+--the avg ratings per stores are
+-- "appstore"	3.5
+-- "playstore"	4.2
+
 
 -- e. App Trader would prefer to work with apps that are available in both the App Store and the Play Store since they can market both for the same $1000 per month.
 
