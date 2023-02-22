@@ -102,7 +102,7 @@ LIMIT 10;
 WITH second_cte AS (
 SELECT 
 	name, 
-	CAST(price AS MONEY),
+	CAST(price AS MONEY) as price,
 	primary_genre,
 	rating
 FROM app_store_apps
@@ -110,23 +110,23 @@ WHERE rating IS NOT NULL
 UNION
 SELECT
 	name,
-	CAST(price AS MONEY),
+	CAST(price AS MONEY) as price,
 	genres,
 	rating
 FROM play_store_apps
 WHERE rating IS NOT NULL
-ORDER BY price, rating DESC
 )
 -----SELECTING FROM THE 2ND UNION-----
-SELECT 
-	primary_genre,
-	ROUND(AVG(rating),1),
-	COUNT(name) as app_count
-	CASE WHEN CAST(price AS MONEY) <= '$1' THEN '$10,000'
-	WHEN CAST(price AS MONEY)
+SELECT  
+	ROUND(AVG(rating),1) AS rating,
+	COUNT(name) as app_count,
+	(SELECT
+	CASE WHEN price <= '$1.00' THEN '$10,000.00'
+	ELSE (price * 1000) AS cost
+	FROM second_cte)
 FROM second_cte
-GROUP BY primary_genre, rating
-ORDER BY rating DESC, app_count DESC;
+GROUP BY rating
+ORDER BY rating DESC;
 
 	
 
