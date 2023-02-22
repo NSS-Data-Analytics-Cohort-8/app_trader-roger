@@ -92,6 +92,43 @@ ORDER BY appname;
     
 -- - An app that costs $200,000 and an app that costs $1.00 will both cost $1000 a month for marketing, regardless of the number of stores it is in.
 
+WITH appunion AS
+(SELECT 'appstore' AS system, TRIM(name) AS appname, 
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM app_store_apps
+UNION 
+SELECT 'playstore' AS system, TRIM(name) AS appname, 
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM play_store_apps)
+SELECT appname,  
+	MAX(purchase_price) AS max_cost, 
+	CAST(COUNT(appname)*5000 AS MONEY) AS monthly_income,
+	CAST (1000 AS MONEY) AS monthly_cost
+FROM appunion
+GROUP BY appname
+ORDER BY appname;
+
+WITH appunion AS
+(SELECT 'appstore' AS system, TRIM(name) AS appname, 
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM app_store_apps
+UNION 
+SELECT 'playstore' AS system, TRIM(name) AS appname, 
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM play_store_apps)
+SELECT appname,  
+	MAX(purchase_price) AS max_cost, 
+	CAST(COUNT(appname)*5000 AS MONEY) AS monthly_income,
+	CAST (1000 AS MONEY) AS monthly_cost,
+	(CAST(COUNT(appname)*5000 AS MONEY)) - (CAST (1000 AS MONEY)) AS net
+FROM appunion
+GROUP BY appname
+ORDER BY appname;
+
 -- d. For every half point that an app gains in rating, its projected lifespan increases by one year. In other words, an app with a rating of 0 can be expected to be in use for 1 year, an app with a rating of 1.0 can be expected to last 3 years, and an app with a rating of 4.0 can be expected to last 9 years.
     
 -- - App store ratings should be calculated by taking the average of the scores from both app stores and rounding to the nearest 0.5.
