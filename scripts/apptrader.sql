@@ -32,18 +32,20 @@ FROM play_store_apps;
     
 -- - If an app is on both stores, it's purchase price will be calculated based off of the highest app price between the two stores. 
 
-WITH appunion AS 
-	(SELECT 'appstore' AS system, TRIM(name) AS appname, (CAST (price AS MONEY) * 10000) AS purchase_price
-	FROM app_store_apps
-	 WHERE (CAST (price AS MONEY) * 10000) > '0'
-	UNION 
-	SELECT 'playstore' AS system, TRIM(name) AS appname, (CAST (price AS MONEY) * 10000) AS purchase_price
-	FROM play_store_apps
-	WHERE (CAST (price AS MONEY) * 10000) > '0')
+WITH appunion AS
+(SELECT 'appstore' AS system, TRIM(name) AS appname, 
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM app_store_apps
+UNION 
+SELECT 'playstore' AS system, TRIM(name) AS appname, 
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM play_store_apps)
 SELECT appname, MAX(purchase_price) AS max_cost
 FROM appunion
 GROUP BY appname
-ORDER BY max_cost DESC;
+ORDER BY max_cost DESC; 
 
 WITH appunion AS
 (SELECT 'appstore' AS system, TRIM(name) AS appname, 
@@ -68,17 +70,22 @@ ORDER BY appname;
 
 -- - An app that is on both app stores will make $10,000 per month. 
 
-WITH appunion AS 
-	(SELECT 'appstore' AS system, TRIM(name) AS appname, (CAST (price AS MONEY) * 10000) AS purchase_price
-	FROM app_store_apps
-	 WHERE (CAST (price AS MONEY) * 10000) > '0'
-	UNION ALL
-	SELECT 'playstore' AS system, TRIM(name) AS appname, (CAST (price AS MONEY) * 10000) AS purchase_price
-	FROM play_store_apps
-	WHERE (CAST (price AS MONEY) * 10000) > '0')
-SELECT *
+WITH appunion AS
+(SELECT 'appstore' AS system, TRIM(name) AS appname, 
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM app_store_apps
+UNION 
+SELECT 'playstore' AS system, TRIM(name) AS appname, 
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM play_store_apps)
+SELECT appname,  
+	MAX(purchase_price) AS max_cost, 
+	CAST(COUNT(appname)*5000 AS MONEY) AS monthly_income
 FROM appunion
-ORDER BY appname, purchase_price DESC;
+GROUP BY appname
+ORDER BY appname;
 
 
 -- c. App Trader will spend an average of $1000 per month to market an app regardless of the price of the app. If App Trader owns rights to the app in both stores, it can market the app for both stores for a single cost of $1000 per month.
