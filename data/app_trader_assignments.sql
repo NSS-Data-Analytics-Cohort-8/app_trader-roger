@@ -36,11 +36,10 @@ FROM play_store_apps;
 SELECT DISTINCT(CAST(price AS MONEY))
 FROM app_store_apps;\
 --OUTPUT there are 36 distinct prices in the app_store
---Both of these outputs was needed to begin building a query piece by piece
+--Both of these outputs were needed to begin building a query piece by piece
 
 
-------FIRST CTE TO UNION BOTH TABLES-------
-WITH firstun as ( 
+------UNION BOTH TABLES TO PREVIEW RESULTS-------
 SELECT 
 	name,
 	CAST(price AS MONEY),
@@ -56,79 +55,134 @@ SELECT
 	content_rating
 FROM play_store_apps
 WHERE rating IS NOT NULL
-ORDER BY price, rating DESC;)
--- --output 
--- "FK Dedinje BGD"	"$0.00"	5.0	"Everyone"
--- "Awake Dating"	"$0.00"	5.0	"Mature 17+"
+--UNION OUTPUT--
+
+-- "FK Dedinje BGD"					"$0.00"	5.0	"Everyone"
+-- "Awake Dating"					"$0.00"	5.0	"Mature 17+"
 -- "UP EB Bill Payment & Details"	"$0.00"	5.0	"Teen"
--- "BI News"	"$0.00"	5.0	"Everyone"
+-- "BI News"						"$0.00"	5.0	"Everyone"
 -- "Railroad Radio Vancouver BC"	"$0.00"	5.0	"Teen"
 
 -----FIND TOP RATED CONTENT RATINGS PER STORE-----
 
 SELECT 
 	DISTINCT content_rating,
-	'appstore' as store,
 	rating
 FROM app_store_apps
 WHERE rating IS NOT NULL
 ORDER BY rating DESC
 LIMIT 10;
 
---the app stores top content ratings by rating are
---"4+"	"appstore"	5.0
--- "17+"	"appstore"	5.0
--- "9+"	"appstore"	5.0
--- "12+"	"appstore"	5.0
--- "4+"	"appstore"	4.5
+-----THE APP STORES TOP CONTENT RATING BY RATING BELOW, THIS SHOULD POINT TOWARD THE AGE GROUP AND TYPE OF APPS WE'D RECOMMEND-----
+-- "12+" 5.0
+-- "9+"	5.0
+-- "17+" 5.0
+-- "4+"	5.0
+-- "9+"	4.5
 
 SELECT
 	DISTINCT content_rating,
-	'playstore' as store,
 	rating
 FROM play_store_apps
 WHERE rating IS NOT NULL
 ORDER BY rating DESC
 LIMIT 10;
 
---the play stores top content ratings by rating are 
--- "Everyone 10+"	"playstore"	5.0
--- "Mature 17+"	"playstore"	5.0
--- "Everyone"	"playstore"	5.0
--- "Teen"	"playstore"	5.0
--- "Mature 17+"	"playstore"	4.9
+-----THE PLAY STORES TOP CONTENT RATING BY RATING BELOW, THIS SHOULD POINT TOWARD THE AGE GROUP AND TYPE OF APPS WE'D RECOMMEND-----
+-- "Everyone" 5.0
+-- "Mature 17+"	5.0
+-- "Teen"	5.0
+-- "Everyone 10+" 5.0
+-- "Everyone"	4.9
 
------2nd CTE TO UNION BOTH TABLES -----
-WITH second_cte AS (
-SELECT 
-	name, 
-	CAST(price AS MONEY) as price,
-	primary_genre,
-	rating
-FROM app_store_apps
-WHERE rating IS NOT NULL
+												----------CONCLUSIONS----------
+-- Both app stores have top rating for games that are meant for a wide range of ages, though the playstore leans more adult
+
+-----CTE TO DRILL DOWN ON GENRE -----
+WITH one AS 
+(
+	SELECT
+		name, 
+		CAST(price AS MONEY) as price,
+		primary_genre,
+		rating
+	FROM app_store_apps
+	WHERE rating IS NOT NULL
 UNION
-SELECT
-	name,
-	CAST(price AS MONEY) as price,
-	genres,
-	rating
-FROM play_store_apps
-WHERE rating IS NOT NULL
+	SELECT
+		name,
+		CAST(price AS MONEY) as price,
+		genres,
+		rating
+	FROM play_store_apps
+	WHERE rating IS NOT NULL
 )
------SELECTING FROM THE 2ND UNION-----
 SELECT  
-	ROUND(AVG(rating),1) AS rating,
 	COUNT(name) as app_count,
-	(SELECT
-	CASE WHEN price <= '$1.00' THEN '$10,000.00'
-	ELSE (price * 1000) AS cost
-	FROM second_cte)
-FROM second_cte
-GROUP BY rating
-ORDER BY rating DESC;
+	primary_genre
+FROM one
+GROUP BY primary_genre
+ORDER BY app_count DESC
 
-	
+												----------CONCLUSIONS----------
+-- The genres with the most apps are below, we can use these to filter down to the most abundant apps. With this information, I'm curious about the avg price per genre to narrow our search down further
+-- 3861	"Games"
+-- 1006	"Entertainment"
+-- 883	"Education"
+-- 720	"Tools"
+-- 476	"Productivity"
+
+WITH one AS 
+(
+	SELECT
+		name, 
+		CAST(price AS MONEY) as price,
+		primary_genre,
+		rating
+	FROM app_store_apps
+	WHERE rating IS NOT NULL
+UNION
+	SELECT
+		name,
+		CAST(price AS MONEY) as price,
+		genres,
+		rating
+	FROM play_store_apps
+	WHERE rating IS NOT NULL
+)
+SELECT
+	primary_genre,
+	ROUND(AVG(CAST(price as numeric)),2) AS avg_app_price
+FROM one
+WHERE primary_genre IN 
+	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
+GROUP BY primary_genre
+ORDER BY avg_app_price DESC;
+
+----------OUTPUT----------
+-- "Education"		2.22
+-- "Entertainment"	2.08
+-- "Productivity"	1.77
+-- "Games"			1.43
+-- "Tools"			0.29
+
+												----------CONCLUSIONS----------
+-- Our top genres have a low price on avg. We should focus on purchasing apps within these genres because they are numerous, are well rated, and have a low price point.
+
+
+
+
+
+
+
+
+
+
+-----CASE STATEMENT TO SHOW APP COST-----
+CASE WHEN price <= '$1.00' THEN '$10,000.00'
+ELSE (price * 10000) END AS cost
+
+
 
 
 -- a. App Trader will purchase apps for 10,000 times the price of the app. For apps that are priced from free up to $1.00, the purchase price is $10,000.
