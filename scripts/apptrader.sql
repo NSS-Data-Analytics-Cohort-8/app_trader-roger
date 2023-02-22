@@ -32,18 +32,36 @@ FROM play_store_apps;
     
 -- - If an app is on both stores, it's purchase price will be calculated based off of the highest app price between the two stores. 
 
-SELECT name, (CAST (price AS MONEY) * 10000) AS purchase_price
+SELECT 'appstore' AS system, name, (CAST (price AS MONEY) * 10000) AS purchase_price
 FROM app_store_apps
+WHERE (CAST (price AS MONEY) * 10000) > '0'
 UNION ALL
-SELECT name, (CAST (price AS MONEY) * 10000) AS purchase_price
+SELECT 'playstore' AS system, name, (CAST (price AS MONEY) * 10000) AS purchase_price
 FROM play_store_apps
-ORDER BY purchase_price DESC;
+WHERE (CAST (price AS MONEY) * 10000) > '0'
+ORDER BY name, purchase_price DESC;
+
+WITH appunion AS 
+	(SELECT 'appstore' AS system, name, (CAST (price AS MONEY) * 10000) AS purchase_price
+	FROM app_store_apps
+	 WHERE (CAST (price AS MONEY) * 10000) > '0'
+	UNION ALL
+	SELECT 'playstore' AS system, name, (CAST (price AS MONEY) * 10000) AS purchase_price
+	FROM play_store_apps
+	WHERE (CAST (price AS MONEY) * 10000) > '0')
+SELECT *
+FROM appunion
+ORDER BY name, purchase_price DESC;
+
+
 
 -- b. Apps earn $5000 per month, per app store it is on, from in-app advertising and in-app purchases, regardless of the price of the app.
     
 -- - An app that costs $200,000 will make the same per month as an app that costs $1.00. 
 
 -- - An app that is on both app stores will make $10,000 per month. 
+
+
 
 -- c. App Trader will spend an average of $1000 per month to market an app regardless of the price of the app. If App Trader owns rights to the app in both stores, it can market the app for both stores for a single cost of $1000 per month.
     
