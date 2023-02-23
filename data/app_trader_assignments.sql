@@ -19,7 +19,7 @@
 --     - `app_store_apps` with 7197 rows  
 --     - `play_store_apps` with 10840 rows
 
-
+-----SELECT ALL FROM BOTH TABLES TO PREVIEW-----
 
 SELECT * 
 FROM app_store_apps;
@@ -27,14 +27,35 @@ FROM app_store_apps;
 SELECT *
 FROM play_store_apps;
 
+-----SELECT DISTINCT PRICE POINTS PER STORE-----
+
 SELECT DISTINCT(CAST(price AS MONEY))
 FROM play_store_apps;
 --OUTPUT there are 92 distinct prices in the play_store
 
 SELECT DISTINCT(CAST(price AS MONEY))
-FROM app_store_apps;\
+FROM app_store_apps;
 --OUTPUT there are 36 distinct prices in the app_store
 --Both of these outputs were needed to begin building a query piece by piece
+
+-----SELECT HIGHEST/LOWEST/AVG PRICE POINTS PER STORES-----
+SELECT MAX(DISTINCT(CAST(price AS MONEY)))
+FROM play_store_apps;
+--OUTPUT $400
+
+SELECT MAX(DISTINCT(CAST(price AS MONEY)))
+FROM app_store_apps;
+--OUTPUT $299
+
+SELECT MIN(DISTINCT(CAST(price AS numeric))) 
+FROM play_store_apps
+WHERE CAST(price AS numeric) > 0;
+--OUTPUT (can't get this one to work due to invalid data type comparisons, but we can assume the lowest price above $0 is $.99)
+
+SELECT MIN(DISTINCT(CAST(price AS MONEY)))
+FROM app_store_apps
+WHERE price > 0;
+--OUTPUT $299
 
 
 ------UNION BOTH TABLES TO PREVIEW RESULTS-------
@@ -94,7 +115,7 @@ LIMIT 10;
 -- "Everyone"	4.9
 
 												----------CONCLUSIONS----------
--- Both app stores have top rating for games that are meant for a wide range of ages, though the playstore leans more adult
+-- Both app stores have top rating for games that are meant for a wide range of ages, though the playstore leans toward adult content
 
 -----CTE TO DRILL DOWN ON GENRE -----
 WITH one AS 
@@ -200,6 +221,78 @@ ORDER BY avg_rating DESC;
 
 												----------CONCLUSIONS----------
 -- Our top genres have a low price on avg. We should focus on purchasing apps within these genres because they are numerous, are well rated, and have a low price point.
+
+-----LOOK AT TOP RATED GAMES WITH RATING >=4-----
+WITH one AS 
+(
+	SELECT
+		'app_store' as system,
+		name, 
+		CAST(price AS MONEY) as price,
+		primary_genre,
+		rating
+	FROM app_store_apps
+	WHERE rating IS NOT NULL
+UNION
+	SELECT
+		'play_store' as system,
+		name,
+		CAST(price AS MONEY) as price,
+		genres,
+		rating
+	FROM play_store_apps
+	WHERE rating IS NOT NULL
+)
+SELECT
+	system,
+	name,
+	rating,
+	price
+FROM one
+WHERE primary_genre IN 
+	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
+AND rating >=4
+ORDER BY rating DESC;
+-----OUTPUT-----
+--a list of 4,930 games between both stores that are rated 4 stars or more.
+
+-----NOW BRINGING IN THE PRICE BETWEEN $0 - $1-----
+WITH one AS 
+(
+	SELECT
+		'app_store' as system,
+		name, 
+		CAST(price AS MONEY) as price,
+		primary_genre,
+		rating
+	FROM app_store_apps
+	WHERE rating IS NOT NULL
+UNION
+	SELECT
+		'play_store' as system,
+		name,
+		CAST(price AS MONEY) as price,
+		genres,
+		rating
+	FROM play_store_apps
+	WHERE rating IS NOT NULL
+)
+SELECT
+	system,
+	name,
+	rating,
+	price
+FROM one
+WHERE primary_genre IN 
+	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
+	AND rating >=4
+	AND price BETWEEN '$0.00' AND '$1.00'
+ORDER BY rating DESC;
+-----OUTPUT-----
+--OUR PREVIOUS LIST 4,930 GAMES HAS SHORTENED TO 3603 GAMES, NARROWING DOWN ON GAMES TO RECOMMEND-----
+
+
+
 
 
 
