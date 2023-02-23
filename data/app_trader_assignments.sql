@@ -233,7 +233,7 @@ WITH one AS
 		rating
 	FROM app_store_apps
 	WHERE rating IS NOT NULL
-UNION
+UNION ALL
 	SELECT
 		'play_store' as system,
 		name,
@@ -254,7 +254,8 @@ WHERE primary_genre IN
 AND rating >=4
 ORDER BY rating DESC;
 -----OUTPUT-----
---a list of 4,930 games between both stores that are rated 4 stars or more.
+--a list of 5,075 games between both stores that are rated 4 stars or more.
+
 
 -----NOW BRINGING IN THE PRICE BETWEEN $0 - $1-----
 WITH one AS 
@@ -267,7 +268,7 @@ WITH one AS
 		rating
 	FROM app_store_apps
 	WHERE rating IS NOT NULL
-UNION
+UNION ALL
 	SELECT
 		'play_store' as system,
 		name,
@@ -289,9 +290,10 @@ WHERE primary_genre IN
 	AND price BETWEEN '$0.00' AND '$1.00'
 ORDER BY rating DESC;
 -----OUTPUT-----
---OUR PREVIOUS LIST 4,930 GAMES HAS SHORTENED TO 3603 GAMES, NARROWING DOWN ON GAMES TO RECOMMEND-----
+--OUR PREVIOUS LIST 5,075 GAMES HAS SHORTENED TO 3,748 GAMES, NARROWING DOWN ON GAMES TO RECOMMEND-----
 
------NOW WE WANT TO PROVIDE CALCULATIONS ON OUR LIST TO SEE WHICH WOULD HAVE THE HIGHEST RATE OF RETURN-----
+
+-----NOW WE WANT TO BRING IN THE PRICE-----
 WITH one AS 
 (
 	SELECT
@@ -303,7 +305,7 @@ WITH one AS
 		rating
 	FROM app_store_apps
 	WHERE rating IS NOT NULL
-UNION
+UNION ALL
 	SELECT
 		'play_store' as system,
 		name,
@@ -324,7 +326,54 @@ WHERE primary_genre IN
 	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
 	AND rating >=4
 ORDER BY rating DESC;
+-----OUTPUT-----
+--THERE ARE A LOT OF GOOD APPS TO CHOOSE TO INVEST IN FOR A LOW STARTING PRICE. 
+-- "app_store"	"Tomb Journey (Ancient ruins fantasy adventure)"	5.0	"$10,000.00"
+-- "play_store"	"ES Billing System (Offline App)"					5.0	"$10,000.00"
+-- "app_store"	"Escape Game: Forgotten"							5.0	"$10,000.00"
+-- "app_store"	"Rule with an Iron Fish: A Pirate Fishing RPG"		5.0	"$29,900.00"
 
+
+-----NEXT UP, SEEING WHICH APPSTORE HAS THE MORE EXPENSIVE PRICE BETWEEN THE TWO, REMOVING THE LOWER PRICE ROWS-----
+WITH one AS 
+(
+	SELECT
+		'app_store' as system,
+		name, 
+		CASE WHEN price <= 1 THEN 10000
+		ELSE (price * 10000) END AS cost,
+		primary_genre,
+		rating
+	FROM app_store_apps
+	WHERE rating IS NOT NULL
+UNION ALL
+	SELECT
+		'play_store' as system,
+		name,
+		CASE WHEN price::MONEY::NUMERIC <= 1 THEN 10000
+		ELSE (price::MONEY::NUMERIC * 10000) END AS cost,
+		genres,
+		rating
+	FROM play_store_apps
+	WHERE rating IS NOT NULL
+)
+two AS (
+SELECT
+	system,
+	name,
+	rating,
+	cost::MONEY
+FROM one
+WHERE primary_genre IN 
+	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
+	AND rating >=4
+ORDER BY rating DESC
+)
+SELECT
+	system,
+	name,
+	cost::MONEY
+FROM two
 
 
 
