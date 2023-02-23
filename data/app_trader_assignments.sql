@@ -291,18 +291,45 @@ ORDER BY rating DESC;
 -----OUTPUT-----
 --OUR PREVIOUS LIST 4,930 GAMES HAS SHORTENED TO 3603 GAMES, NARROWING DOWN ON GAMES TO RECOMMEND-----
 
+-----NOW WE WANT TO PROVIDE CALCULATIONS ON OUR LIST TO SEE WHICH WOULD HAVE THE HIGHEST RATE OF RETURN-----
+WITH one AS 
+(
+	SELECT
+		'app_store' as system,
+		name, 
+		CASE WHEN price <= 1 THEN 10000
+		ELSE (price * 10000) END AS cost,
+		primary_genre,
+		rating
+	FROM app_store_apps
+	WHERE rating IS NOT NULL
+UNION
+	SELECT
+		'play_store' as system,
+		name,
+		CASE WHEN price::MONEY::NUMERIC <= 1 THEN 10000
+		ELSE (price::MONEY::NUMERIC * 10000) END AS cost,
+		genres,
+		rating
+	FROM play_store_apps
+	WHERE rating IS NOT NULL
+)
+SELECT
+	system,
+	name,
+	rating,
+	cost::MONEY
+FROM one
+WHERE primary_genre IN 
+	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
+	AND rating >=4
+ORDER BY rating DESC;
 
 
 
 
 
 
------CASE STATEMENT TO SHOW APP COST-----
-CASE WHEN price <= '$1.00' THEN '$10,000.00'
-ELSE (price * 10000) END AS cost
-
-
-----------NEXT STEP IS TO TRY AND COMPARE PRICES BETWEEN APP STORES AND CALCULATE THE COST PER APP----------
 
 
 -- #### 2. Assumptions
