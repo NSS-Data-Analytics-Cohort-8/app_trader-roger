@@ -209,15 +209,35 @@ ORDER BY lifetime_net_profit DESC, appname;
 
 -- a. Develop some general recommendations as to the price range, genre, content rating, or anything else for apps that the company should target.
 
--- b. Develop a Top 10 List of the apps that App Trader should buy.
-
 WITH appunion AS
-(SELECT 'appstore' AS system, TRIM(name) AS appname, rating,
+(SELECT 'appstore' AS system, TRIM(name) AS appname, rating, content_rating, primary_genre AS genre,
 CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
 	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
 FROM app_store_apps
 UNION 
-SELECT 'playstore' AS system, TRIM(name) AS appname, rating,
+SELECT 'playstore' AS system, TRIM(name) AS appname, rating, content_rating, genres AS genre,
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM play_store_apps)
+SELECT genre, ROUND(AVG(rating),5) AS avg_rating
+FROM appunion
+WHERE rating IS NOT NULL
+GROUP BY genre
+ORDER BY avg_rating DESC;
+
+
+-- There are many free games, and if the prices are $, then they can be purchased for $10,000.
+--
+
+-- b. Develop a Top 10 List of the apps that App Trader should buy.
+
+WITH appunion AS
+(SELECT 'appstore' AS system, TRIM(name) AS appname, rating, content_rating, primary_genre AS genre,
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM app_store_apps
+UNION 
+SELECT 'playstore' AS system, TRIM(name) AS appname, rating, content_rating, genres AS genre,
 CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
 	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
 FROM play_store_apps)
@@ -226,12 +246,63 @@ SELECT appname,
 	CAST(COUNT(appname)*5000 AS MONEY) AS monthly_income,
 	CAST (1000 AS MONEY) AS monthly_cost,
 	(CAST(COUNT(appname)*5000 AS MONEY)) - (CAST (1000 AS MONEY)) AS net,
-	MAX(rating) AS best_rating,
-	(MAX(rating * 2)+1)*12 AS app_rating_mo_life,
-	((CAST(COUNT(appname)*5000 AS MONEY)) - (CAST (1000 AS MONEY))) * ((MAX(rating * 2)+1)*12) AS lifetime_gross_profit,
-	(((CAST(COUNT(appname)*5000 AS MONEY)) - (CAST (1000 AS MONEY))) * ((MAX(rating * 2)+1)*12)) - MAX(purchase_price) AS lifetime_net_profit
+	ROUND(ROUND(AVG(rating)/5,1)*5,1) AS avg_rating,
+	(ROUND(ROUND((AVG(rating * 2)+1)*12)/5,1)*5) AS app_rating_mo_life,
+	((CAST(COUNT(appname)*5000 AS MONEY)) - (CAST (1000 AS MONEY))) * ((AVG(rating * 2)+1)*12) AS lifetime_gross_profit,
+	(((CAST(COUNT(appname)*5000 AS MONEY)) - (CAST (1000 AS MONEY))) * ((AVG(rating * 2)+1)*12)) - MAX(purchase_price) AS lifetime_net_profit
 FROM appunion
 WHERE rating IS NOT NULL
 GROUP BY appname
 ORDER BY lifetime_net_profit DESC, appname
-LIMIT 15;
+LIMIT 20;
+
+-- "Solitaire"--1
+-- "Bubble Shooter" (only playstore)
+-- "PewDiePie's Tuber Simulator"--2
+-- "ASOS"--3
+-- "Domino's Pizza USA" (Probably not for sale)
+-- "Egg, Inc."--4
+-- "The Guardian" (Probably not for sale)
+-- "Cytus"--5
+-- "Geometry Dash Lite"--6
+-- "English Grammar Test" (only playstore)
+-- "Period Tracker" (only playstore)
+-- "H*nest Meditation"--7
+-- "Fernanfloo"--8
+-- "Bible" (Probably not for sale)
+-- "Flashlight" (only playstore)
+-- "Narcos: Cartel Wars"--9
+-- "Ruler" (only playstore)
+-- "Toy Blast"--10
+-- "Zombie Catchers"--11
+-- "The EO Bar"--12
+
+-- APP REVIEW, appname, system, rating, and genre.
+
+WITH appunion AS
+(SELECT 'appstore' AS system, TRIM(name) AS appname, rating, content_rating, primary_genre AS genre,
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM app_store_apps
+UNION 
+SELECT 'playstore' AS system, TRIM(name) AS appname, rating, content_rating, genres AS genre,
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM play_store_apps)
+SELECT appname, system, rating, genre
+FROM appunion
+WHERE appname = 'Bubble Shooter';
+
+WITH appunion AS
+(SELECT 'appstore' AS system, TRIM(name) AS appname, rating, content_rating, primary_genre AS genre,
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM app_store_apps
+UNION 
+SELECT 'playstore' AS system, TRIM(name) AS appname, rating, content_rating, genres AS genre,
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM play_store_apps)
+SELECT count(appname)
+FROM appunion
+WHERE appname = 'Bubble Shooter';
