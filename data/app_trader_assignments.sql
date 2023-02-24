@@ -398,19 +398,28 @@ UNION ALL
 )
 SELECT
 	name,
-	cost::MONEY
+	rating,
+	cost::MONEY as cost_of_app,
+	((cost::MONEY::NUMERIC *10000)-1000)::MONEY as monthly_revenue,
+	(((cost::MONEY::NUMERIC *10000)*12)-12000)::MONEY as annual_revenue,
+	((((cost::MONEY::NUMERIC *10000)*12)-12000)*11)::MONEY as lifetime_revenue
 FROM one
-WHERE primary_genre IN 
-	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
-	AND rating >=4
+WHERE rating = 5
 	AND name IN
 		(SELECT a.name
 		FROM app_store_apps as a
 		JOIN play_store_apps as p
 		ON a.name = p.name
 		)
-ORDER BY cost;
-
+		AND cost::MONEY::NUMERIC < 11000
+ORDER BY rating DESC;
+-----OUTPUT-----
+--These results shows apps that are in both app stores, their purchase price for App Trader, the monthly revenue, the annual revenue, and the lifetime revenue. The life time of these apps is 11 years since they're all rated 5 stars, so the annual cost is multiplied by 11 to get the lifetime revenue. This list is less than 10 so it will require additional computing to bring in another 4 apps to supply a top 10 recommendation list.
+-- "ASOS"							5.0	"$10,000.00"	"$99,999,000.00"	"$1,199,988,000.00"	"$13,199,868,000.00"
+-- "Geometry Dash Lite"				5.0	"$10,000.00"	"$99,999,000.00"	"$1,199,988,000.00"	"$13,199,868,000.00"
+-- "PewDiePie's Tuber Simulator"	5.0	"$10,000.00"	"$99,999,000.00"	"$1,199,988,000.00"	"$13,199,868,000.00"
+-- "The Guardian"					5.0	"$10,000.00"	"$99,999,000.00"	"$1,199,988,000.00"	"$13,199,868,000.00"
+-- "Domino's Pizza USA"				5.0	"$10,000.00"	"$99,999,000.00"	"$1,199,988,000.00"	"$13,199,868,000.00"
 
 
 -- #### 2. Assumptions
