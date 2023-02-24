@@ -121,20 +121,24 @@ LIMIT 10;
 WITH one AS 
 (
 	SELECT
+		'appstore' as system,
 		name, 
 		CAST(price AS MONEY) as price,
 		primary_genre,
 		rating
 	FROM app_store_apps
-	WHERE rating IS NOT NULL
-UNION
+	WHERE rating >=4 
+	AND rating IS NOT NULL
+UNION ALL
 	SELECT
+		'playstore' as system,
 		name,
 		CAST(price AS MONEY) as price,
 		genres,
 		rating
 	FROM play_store_apps
-	WHERE rating IS NOT NULL
+	WHERE rating >=4 
+	AND rating IS NOT NULL
 )
 SELECT  
 	COUNT(name) as app_count,
@@ -142,106 +146,38 @@ SELECT
 FROM one
 GROUP BY primary_genre
 ORDER BY app_count DESC
-
-												----------CONCLUSIONS----------
--- The genres with the most apps are below, we can use these to filter down to the most abundant apps. With this information, I'm curious about the avg price per genre to narrow our search down further
+-----OUTPUT-----
+--The output includes 122 distinct genres across both stores. The output includes the genres that are rated >=4 and we also see the count of apps in these genres
 -- 3861	"Games"
 -- 1006	"Entertainment"
 -- 883	"Education"
 -- 720	"Tools"
 -- 476	"Productivity"
 
+
+
+-----LOOK AT TOP RATED APPS WITH RATING >=4-----
 WITH one AS 
 (
 	SELECT
+		'appstore' as system,
 		name, 
 		CAST(price AS MONEY) as price,
 		primary_genre,
 		rating
 	FROM app_store_apps
-	WHERE rating IS NOT NULL
+	WHERE rating >=4 
+	AND rating IS NOT NULL
 UNION ALL
 	SELECT
+		'playstore' as system,
 		name,
 		CAST(price AS MONEY) as price,
 		genres,
 		rating
 	FROM play_store_apps
-	WHERE rating IS NOT NULL
-)
-SELECT
-	primary_genre,
-	ROUND(AVG(CAST(price as numeric)),2) AS avg_app_price
-FROM one
-WHERE primary_genre IN 
-	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
-GROUP BY primary_genre
-ORDER BY avg_app_price DESC;
-
-----------OUTPUT----------
--- "Education"		2.22
--- "Entertainment"	2.08
--- "Productivity"	1.77
--- "Games"			1.43
--- "Tools"			0.29
-
-WITH one AS 
-(
-	SELECT
-		name, 
-		CAST(price AS MONEY) as price,
-		primary_genre,
-		rating
-	FROM app_store_apps
-	WHERE rating IS NOT NULL
-UNION
-	SELECT
-		name,
-		CAST(price AS MONEY) as price,
-		genres,
-		rating
-	FROM play_store_apps
-	WHERE rating IS NOT NULL
-)
-SELECT
-	primary_genre,
-	ROUND(AVG(rating),1) AS avg_rating
-FROM one
-WHERE primary_genre IN 
-	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
-GROUP BY primary_genre
-ORDER BY avg_rating DESC;
-----------OUTPUT---------
--- "Productivity"	4.1
--- "Tools"			4.0
--- "Education"		3.8
--- "Games"			3.7
--- "Entertainment"	3.6
--- THE BEST RATED APPS FALL INTO THE PRODUCTIVITY AND TOOLS GENRES
-
-												----------CONCLUSIONS----------
--- Our top genres have a low price on avg. We should focus on purchasing apps within these genres because they are numerous, are well rated, and have a low price point.
-
------LOOK AT TOP RATED GAMES WITH RATING >=4-----
-WITH one AS 
-(
-	SELECT
-		'app_store' as system,
-		name, 
-		CAST(price AS MONEY) as price,
-		primary_genre,
-		rating
-	FROM app_store_apps
-	WHERE rating IS NOT NULL
-UNION ALL
-	SELECT
-		'play_store' as system,
-		name,
-		CAST(price AS MONEY) as price,
-		genres,
-		rating
-	FROM play_store_apps
-	WHERE rating IS NOT NULL
+	WHERE rating >=4 
+	AND rating IS NOT NULL
 )
 SELECT
 	system,
@@ -251,32 +187,102 @@ SELECT
 FROM one
 WHERE primary_genre IN 
 	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
-AND rating >=4
 ORDER BY rating DESC;
 -----OUTPUT-----
---a list of 5,075 games between both stores that are rated 4 stars or more.
+--a list of 5,075 games between both stores that are rated 4+ stars.
 
-
------NOW BRINGING IN THE PRICE BETWEEN $0 - $1-----
 WITH one AS 
 (
 	SELECT
-		'app_store' as system,
+		'appstore' as system,
 		name, 
 		CAST(price AS MONEY) as price,
 		primary_genre,
 		rating
 	FROM app_store_apps
-	WHERE rating IS NOT NULL
+	WHERE rating >=4 
+	AND rating IS NOT NULL
 UNION ALL
 	SELECT
-		'play_store' as system,
+		'playstore' as system,
 		name,
 		CAST(price AS MONEY) as price,
 		genres,
 		rating
 	FROM play_store_apps
-	WHERE rating IS NOT NULL
+	WHERE rating >=4 
+	AND rating IS NOT NULL
+)
+SELECT
+	system,
+	COUNT(name) as app_count
+FROM one
+WHERE primary_genre IN 
+	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
+GROUP BY system;
+-----OUTPUT-----
+--Of the 5,075 apps between both stores, 3538 live on the app store and 1537 live in the playstore. Next step is to see which of these 5,075 live in both stores. 
+
+WITH one AS 
+(
+	SELECT
+		'appstore' as system,
+		name,
+		CAST(price AS MONEY) as price,
+		primary_genre,
+		rating
+	FROM app_store_apps
+	WHERE rating >=4 
+	AND rating IS NOT NULL
+UNION ALL
+	SELECT
+		'playstore' as system,
+		name,
+		CAST(price AS MONEY) as price,
+		genres,
+		rating
+	FROM play_store_apps
+	WHERE rating >=4 
+	AND rating IS NOT NULL
+)
+SELECT
+	name,
+	price::MONEY
+FROM one
+WHERE primary_genre IN 
+	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
+	AND name IN
+		(SELECT a.name
+		FROM app_store_apps as a
+		JOIN play_store_apps as p
+		ON a.name = p.name
+		)
+;
+-----OUTPUT-----
+--Of the 5,075 apps that are rated >=4 and are in genres with the biggest pool of apps to choose from, there are 269 that live in both app stores.
+
+-----NOW BRINGING IN THE APPS THAT COST BETWEEN $0 - $1-----
+WITH one AS 
+(
+	SELECT
+		'appstore' as system,
+		name,
+		CAST(price AS MONEY) as price,
+		primary_genre,
+		rating
+	FROM app_store_apps
+	WHERE rating >=4 
+	AND rating IS NOT NULL
+UNION ALL
+	SELECT
+		'playstore' as system,
+		name,
+		CAST(price AS MONEY) as price,
+		genres,
+		rating
+	FROM play_store_apps
+	WHERE rating >=4 
+	AND rating IS NOT NULL
 )
 SELECT
 	system,
@@ -288,12 +294,18 @@ WHERE primary_genre IN
 	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
 	AND rating >=4
 	AND price BETWEEN '$0.00' AND '$1.00'
-ORDER BY rating DESC;
+	AND name IN
+	(SELECT a.name
+		FROM app_store_apps as a
+		JOIN play_store_apps as p
+		ON a.name = p.name
+		)
+;
 -----OUTPUT-----
---OUR PREVIOUS LIST 5,075 GAMES HAS SHORTENED TO 3,748 GAMES, NARROWING DOWN ON GAMES TO RECOMMEND-----
+--Looking at the apps that are in $10,000 price range, we see the list go from 269 to 223
 
 
------NOW WE WANT TO BRING IN THE PRICE-----
+-----BRING IN THE PURCHASING PRICE FOR APP TRADER-----
 WITH one AS 
 (
 	SELECT
@@ -304,7 +316,8 @@ WITH one AS
 		primary_genre,
 		rating
 	FROM app_store_apps
-	WHERE rating IS NOT NULL
+	WHERE rating >=4 
+	AND rating IS NOT NULL
 UNION ALL
 	SELECT
 		'play_store' as system,
@@ -314,7 +327,8 @@ UNION ALL
 		genres,
 		rating
 	FROM play_store_apps
-	WHERE rating IS NOT NULL
+	WHERE rating >=4 
+	AND rating IS NOT NULL
 )
 SELECT
 	system,
@@ -325,13 +339,17 @@ FROM one
 WHERE primary_genre IN 
 	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
 	AND rating >=4
+	AND cost::NUMERIC <=10000
+	AND name IN
+	(SELECT a.name
+		FROM app_store_apps as a
+		JOIN play_store_apps as p
+		ON a.name = p.name
+		)
 ORDER BY rating DESC;
+		
 -----OUTPUT-----
---THERE ARE A LOT OF GOOD APPS TO CHOOSE TO INVEST IN FOR A LOW STARTING PRICE. 
--- "app_store"	"Tomb Journey (Ancient ruins fantasy adventure)"	5.0	"$10,000.00"
--- "play_store"	"ES Billing System (Offline App)"					5.0	"$10,000.00"
--- "app_store"	"Escape Game: Forgotten"							5.0	"$10,000.00"
--- "app_store"	"Rule with an Iron Fish: A Pirate Fishing RPG"		5.0	"$29,900.00"
+--Computed the purchase price for apps that fit in our prefiltered list of 4+ stars, popular genre, app that's in both stores, and price less than or equal to 10,000
 
 
 -----NEXT UP, SEEING WHICH APPSTORE HAS THE MORE EXPENSIVE PRICE BETWEEN THE TWO, REMOVING THE LOWER PRICE ROWS-----
@@ -471,6 +489,9 @@ WHERE rating IS NOT NULL;
 -- #### 3. Deliverables
 
 -- a. Develop some general recommendations as to the price range, genre, content rating, or anything else for apps that the company should target.
+
+Recommendations for App Trader:
+There are ~500 apps that live in both app stores. Of those ~500, 
 
 -- b. Develop a Top 10 List of the apps that App Trader should buy.
 
