@@ -160,7 +160,7 @@ WITH one AS
 		rating
 	FROM app_store_apps
 	WHERE rating IS NOT NULL
-UNION
+UNION ALL
 	SELECT
 		name,
 		CAST(price AS MONEY) as price,
@@ -357,27 +357,59 @@ UNION ALL
 	FROM play_store_apps
 	WHERE rating IS NOT NULL
 )
-two AS (
 SELECT
-	system,
 	name,
-	rating,
 	cost::MONEY
 FROM one
 WHERE primary_genre IN 
 	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
 	AND rating >=4
-ORDER BY rating DESC
+	AND name IN
+		(SELECT a.name
+		FROM app_store_apps as a
+		JOIN play_store_apps as p
+		ON a.name = p.name
+		)
+ORDER BY cost;
+-----OUTPUT-----
+-- The above query results a list of of games that are found in both app stores, are in the categories with the highest count of games, are rated 4+ stars and are $10,000
+
+WITH one AS 
+(
+	SELECT
+		'app_store' as system,
+		name, 
+		CASE WHEN price <= 1 THEN 10000
+		ELSE (price * 10000) END AS cost,
+		primary_genre,
+		rating
+	FROM app_store_apps
+	WHERE rating IS NOT NULL
+UNION ALL
+	SELECT
+		'play_store' as system,
+		name,
+		CASE WHEN price::MONEY::NUMERIC <= 1 THEN 10000
+		ELSE (price::MONEY::NUMERIC * 10000) END AS cost,
+		genres,
+		rating
+	FROM play_store_apps
+	WHERE rating IS NOT NULL
 )
 SELECT
-	system,
 	name,
 	cost::MONEY
-FROM two
-
-
-
-
+FROM one
+WHERE primary_genre IN 
+	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
+	AND rating >=4
+	AND name IN
+		(SELECT a.name
+		FROM app_store_apps as a
+		JOIN play_store_apps as p
+		ON a.name = p.name
+		)
+ORDER BY cost;
 
 
 
