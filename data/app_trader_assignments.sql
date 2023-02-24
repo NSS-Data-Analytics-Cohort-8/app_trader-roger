@@ -27,36 +27,6 @@ FROM app_store_apps;
 SELECT *
 FROM play_store_apps;
 
------SELECT DISTINCT PRICE POINTS PER STORE-----
-
-SELECT DISTINCT(CAST(price AS MONEY))
-FROM play_store_apps;
---OUTPUT there are 92 distinct prices in the play_store
-
-SELECT DISTINCT(CAST(price AS MONEY))
-FROM app_store_apps;
---OUTPUT there are 36 distinct prices in the app_store
---Both of these outputs were needed to begin building a query piece by piece
-
------SELECT HIGHEST/LOWEST/AVG PRICE POINTS PER STORES-----
-SELECT MAX(DISTINCT(CAST(price AS MONEY)))
-FROM play_store_apps;
---OUTPUT $400
-
-SELECT MAX(DISTINCT(CAST(price AS MONEY)))
-FROM app_store_apps;
---OUTPUT $299
-
-SELECT MIN(DISTINCT(CAST(price AS numeric))) 
-FROM play_store_apps
-WHERE CAST(price AS numeric) > 0;
---OUTPUT (can't get this one to work due to invalid data type comparisons, but we can assume the lowest price above $0 is $.99)
-
-SELECT MIN(DISTINCT(CAST(price AS MONEY)))
-FROM app_store_apps
-WHERE price > 0;
---OUTPUT $299
-
 
 ------UNION BOTH TABLES TO PREVIEW RESULTS-------
 SELECT 
@@ -352,7 +322,6 @@ ORDER BY rating DESC;
 --Computed the purchase price for apps that fit in our prefiltered list of 4+ stars, popular genre, app that's in both stores, and price less than or equal to 10,000
 
 
------NEXT UP, SEEING WHICH APPSTORE HAS THE MORE EXPENSIVE PRICE BETWEEN THE TWO, REMOVING THE LOWER PRICE ROWS-----
 WITH one AS 
 (
 	SELECT
@@ -360,6 +329,7 @@ WITH one AS
 		name, 
 		CASE WHEN price <= 1 THEN 10000
 		ELSE (price * 10000) END AS cost,
+		price::NUMERIC,
 		primary_genre,
 		rating
 	FROM app_store_apps
@@ -370,59 +340,22 @@ UNION ALL
 		name,
 		CASE WHEN price::MONEY::NUMERIC <= 1 THEN 10000
 		ELSE (price::MONEY::NUMERIC * 10000) END AS cost,
+		price::NUMERIC,
 		genres,
 		rating
 	FROM play_store_apps
 	WHERE rating IS NOT NULL
 )
 SELECT
-	name,
-	cost::MONEY
-FROM one
-WHERE primary_genre IN 
-	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
-	AND rating >=4
-	AND name IN
-		(SELECT a.name
-		FROM app_store_apps as a
-		JOIN play_store_apps as p
-		ON a.name = p.name
-		)
-ORDER BY cost;
------OUTPUT-----
--- The above query results a list of of games that are found in both app stores, are in the categories with the highest count of games, are rated 4+ stars and are $10,000
-
-WITH one AS 
-(
-	SELECT
-		'app_store' as system,
-		name, 
-		CASE WHEN price <= 1 THEN 10000
-		ELSE (price * 10000) END AS cost,
-		primary_genre,
-		rating
-	FROM app_store_apps
-	WHERE rating IS NOT NULL
-UNION ALL
-	SELECT
-		'play_store' as system,
-		name,
-		CASE WHEN price::MONEY::NUMERIC <= 1 THEN 10000
-		ELSE (price::MONEY::NUMERIC * 10000) END AS cost,
-		genres,
-		rating
-	FROM play_store_apps
-	WHERE rating IS NOT NULL
-)
-SELECT
+	system,
 	name,
 	rating,
 	cost::MONEY as cost_of_app,
 	((cost::MONEY::NUMERIC *10000)-1000)::MONEY as monthly_revenue,
 	(((cost::MONEY::NUMERIC *10000)*12)-12000)::MONEY as annual_revenue,
-	((((cost::MONEY::NUMERIC *10000)*12)-12000)*11)::MONEY as lifetime_revenue
+	((((cost::MONEY::NUMERIC *10000)*12)-12000)*4)::MONEY as lifetime_revenue
 FROM one
-WHERE rating = 5
+WHERE rating >=4 
 	AND name IN
 		(SELECT a.name
 		FROM app_store_apps as a
@@ -430,14 +363,24 @@ WHERE rating = 5
 		ON a.name = p.name
 		)
 		AND cost::MONEY::NUMERIC < 11000
+		AND primary_genre IN 
+		('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
 ORDER BY rating DESC;
 -----OUTPUT-----
 --These results shows apps that are in both app stores, their purchase price for App Trader, the monthly revenue, the annual revenue, and the lifetime revenue. The life time of these apps is 11 years since they're all rated 5 stars, so the annual cost is multiplied by 11 to get the lifetime revenue. This list is less than 10 so it will require additional computing to bring in another 4 apps to supply a top 10 recommendation list.
--- "ASOS"							5.0	"$10,000.00"	"$99,999,000.00"	"$1,199,988,000.00"	"$13,199,868,000.00"
--- "Geometry Dash Lite"				5.0	"$10,000.00"	"$99,999,000.00"	"$1,199,988,000.00"	"$13,199,868,000.00"
--- "PewDiePie's Tuber Simulator"	5.0	"$10,000.00"	"$99,999,000.00"	"$1,199,988,000.00"	"$13,199,868,000.00"
--- "The Guardian"					5.0	"$10,000.00"	"$99,999,000.00"	"$1,199,988,000.00"	"$13,199,868,000.00"
--- "Domino's Pizza USA"				5.0	"$10,000.00"	"$99,999,000.00"	"$1,199,988,000.00"	"$13,199,868,000.00"
+
+---playing around with a table expression to filter---
+AND two AS (
+SELECT
+	a.name,
+	a.price::MONEY as app_price,
+	p.price::MONEY as play_price,
+	CASE WHEN a.price::MONEY > p.price::MONEY THEN a.price::MONEY
+	ELSE p.price::MONEY END as highest_price
+FROM app_store_apps as a
+JOIN play_store_apps as p
+ON a.name = p.name
+)
 
 
 -- #### 2. Assumptions
