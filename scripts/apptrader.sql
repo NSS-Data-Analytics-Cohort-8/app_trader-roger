@@ -210,3 +210,28 @@ ORDER BY lifetime_net_profit DESC, appname;
 -- a. Develop some general recommendations as to the price range, genre, content rating, or anything else for apps that the company should target.
 
 -- b. Develop a Top 10 List of the apps that App Trader should buy.
+
+WITH appunion AS
+(SELECT 'appstore' AS system, TRIM(name) AS appname, rating,
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM app_store_apps
+UNION 
+SELECT 'playstore' AS system, TRIM(name) AS appname, rating,
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM play_store_apps)
+SELECT appname, 
+	MAX(purchase_price) AS max_cost, 
+	CAST(COUNT(appname)*5000 AS MONEY) AS monthly_income,
+	CAST (1000 AS MONEY) AS monthly_cost,
+	(CAST(COUNT(appname)*5000 AS MONEY)) - (CAST (1000 AS MONEY)) AS net,
+	MAX(rating) AS best_rating,
+	(MAX(rating * 2)+1)*12 AS app_rating_mo_life,
+	((CAST(COUNT(appname)*5000 AS MONEY)) - (CAST (1000 AS MONEY))) * ((MAX(rating * 2)+1)*12) AS lifetime_gross_profit,
+	(((CAST(COUNT(appname)*5000 AS MONEY)) - (CAST (1000 AS MONEY))) * ((MAX(rating * 2)+1)*12)) - MAX(purchase_price) AS lifetime_net_profit
+FROM appunion
+WHERE rating IS NOT NULL
+GROUP BY appname
+ORDER BY lifetime_net_profit DESC, appname
+LIMIT 15;
