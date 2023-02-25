@@ -333,6 +333,9 @@ ORDER BY rating DESC;
 -----OUTPUT-----
 --These results shows apps that are in both app stores, their purchase price for App Trader, the monthly revenue, the annual revenue, and the lifetime revenue. The life time of these apps is 11 years since they're all rated 5 stars, so the annual cost is multiplied by 11 to get the lifetime revenue. This list is less than 10 so it will require additional computing to bring in another 4 apps to supply a top 10 recommendation list.
 
+
+
+
 ---first CTE filters joins both tables and filters them to include apps that are rated 4+, removes null ratings, and builds a column that calculates the cost of purchase for App Trader using a case statement
 WITH one AS 
 (
@@ -412,7 +415,78 @@ SELECT
 FROM three
 LIMIT 10;
 
-	
+----------Reworking above---------
+WITH one AS (
+SELECT
+	a.name as app_name,
+	AVG(a.rating) as rating,
+	CASE WHEN a.price::MONEY > p.price::MONEY THEN a.price::MONEY
+	ELSE p.price::MONEY END as highest_price
+FROM app_store_apps as a
+JOIN play_store_apps as p
+ON a.name = p.name
+GROUP BY app_name, highest_price
+),
+three AS (
+SELECT 
+	app_name,
+	highest_price AS app_price,
+	rating,
+	CASE WHEN highest_price::MONEY::NUMERIC <=1 THEN 10000
+	ELSE highest_price::NUMERIC * 10000::NUMERIC END AS cost_to_purchase,
+	CASE WHEN rating <=0 THEN 1
+	WHEN rating <=0.5 THEN 2
+	WHEN rating <=1 THEN 3
+	WHEN rating <=1.5 THEN 4
+	WHEN rating <=2 THEN 5
+	WHEN rating <=2.5 THEN 6
+	WHEN rating <=3 THEN 7
+	WHEN rating <=3.5 THEN 8
+	WHEN rating <=4 THEN 9
+	WHEN rating <=4.5 THEN 10
+	ELSE 11 END AS expected_lifespan_years
+FROM one
+)
+SELECT 
+	app_name,
+	TRUNC(ROUND(rating*2,0)/2,1),
+	app_price,
+	cost_to_purchase::MONEY,
+	expected_lifespan_years,
+	((12*10000)*expected_lifespan_years)::MONEY-(12000*expected_lifespan_years)::MONEY-cost_to_purchase::MONEY AS potential_revenue_over_lifespan
+FROM three
+WHERE cost_to_purchase <= 10000
+ORDER BY rating DESC
+LIMIT 10;
+
+
+
+WITH one AS (
+SELECT
+	a.name as app_name,
+	AVG(a.rating) as rating,
+	CASE WHEN a.price::MONEY > p.price::MONEY THEN a.price::MONEY
+	ELSE p.price::MONEY END as highest_price
+FROM app_store_apps as a
+JOIN play_store_apps as p
+ON a.name = p.name
+GROUP BY app_name, highest_price
+)
+SELECT 
+	app_name,
+	highest_price AS app_price,
+	CASE WHEN highest_price::MONEY::NUMERIC <=1 THEN 10000
+	ELSE highest_price::MONEY::NUMERIC*10000::MONEY::NUMERIC END AS cost_to_purchase,
+	CASE WHEN rating <=0 THEN 1
+	WHEN rating <=1 THEN 3
+	WHEN rating <=2 THEN 5
+	WHEN rating <=3 THEN 7
+	WHEN rating <=4 THEN 9
+	ELSE 11 END AS expected_lifespan_years
+FROM one
+
+
+
 
 -- #### 2. Assumptions
 
@@ -442,13 +516,13 @@ LIMIT 10;
 
 SELECT 
 	'appstore' as system,
-	ROUND(AVG(rating),1)
+	TRUNC(ROUND(rating*2,0)/2,1)
 FROM app_store_apps
 WHERE rating IS NOT NULL
 UNION 
 SELECT 
 	'playstore' as system,
-	ROUND(AVG(rating),1)
+	TRUNC(ROUND(rating*2,0)/2,1)
 FROM play_store_apps
 WHERE rating IS NOT NULL;
 
