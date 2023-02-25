@@ -219,13 +219,27 @@ SELECT 'playstore' AS system, TRIM(name) AS appname, rating, content_rating, gen
 CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
 	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
 FROM play_store_apps)
+SELECT ROUND(AVG(rating),5) AS avg_rating, content_rating
+FROM appunion
+WHERE rating IS NOT NULL
+GROUP BY content_rating
+ORDER BY avg_rating DESC;															
+
+WITH appunion AS
+(SELECT 'appstore' AS system, TRIM(name) AS appname, rating, content_rating, primary_genre AS genre,
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM app_store_apps
+UNION 
+SELECT 'playstore' AS system, TRIM(name) AS appname, rating, content_rating, genres AS genre,
+CASE WHEN CAST(price AS MONEY) <= '$1.00' THEN '$10,000.00'
+	ELSE (CAST (price AS MONEY) * 10000) END AS purchase_price
+FROM play_store_apps)
 SELECT genre, ROUND(AVG(rating),5) AS avg_rating
 FROM appunion
 WHERE rating IS NOT NULL
 GROUP BY genre
 ORDER BY avg_rating DESC;
-
-
 -- There are many free games, and if the prices are $, then they can be purchased for $10,000.
 --
 
