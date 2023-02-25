@@ -21,7 +21,7 @@ SELECT app.name, 'app_store' AS app_store, 5000 AS monthly_earnings
 FROM app_store_apps AS app
 UNION
 SELECT app.name, 'play_store' AS app_store, 5000 AS monthly_earnings
-FROM play_store_apps AS app; ----this only gave me 500 as the monthly_earnings aka monthly income decided a different approach...
+FROM play_store_apps AS app; ----this only gave me 500 as the monthly_earnings aka monthly income decided a different approach......
 
 
 With appunion AS 
