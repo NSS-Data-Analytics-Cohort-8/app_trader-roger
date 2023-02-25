@@ -416,6 +416,7 @@ FROM three
 LIMIT 10;
 
 ----------Reworking above---------
+--This first CTE resuolts in the highest price between the two stores which we call on later in our main query. This is also matching both tables on app name so this is also resulting in apps that are in both stores which App Trader would want since they get a bogo.
 WITH one AS (
 SELECT
 	a.name as app_name,
@@ -427,7 +428,8 @@ JOIN play_store_apps as p
 ON a.name = p.name
 GROUP BY app_name, highest_price
 ),
-three AS (
+--This CTE is calling on the first CTE. We're grabbing the app name, the highest price and renaming it as the app price, the rating, and one case when statement that will creat a new column based on the app price column and multiple by 10,000 to produce the purchase price for App Trader. Then another case when that builds the expected life span of an app based on assumptions.
+two AS (
 SELECT 
 	app_name,
 	highest_price AS app_price,
@@ -454,36 +456,12 @@ SELECT
 	cost_to_purchase::MONEY,
 	expected_lifespan_years,
 	((12*10000)*expected_lifespan_years)::MONEY-(12000*expected_lifespan_years)::MONEY-cost_to_purchase::MONEY AS potential_revenue_over_lifespan
-FROM three
+FROM two
 WHERE cost_to_purchase <= 10000
 ORDER BY rating DESC
 LIMIT 10;
 
 
-
-WITH one AS (
-SELECT
-	a.name as app_name,
-	AVG(a.rating) as rating,
-	CASE WHEN a.price::MONEY > p.price::MONEY THEN a.price::MONEY
-	ELSE p.price::MONEY END as highest_price
-FROM app_store_apps as a
-JOIN play_store_apps as p
-ON a.name = p.name
-GROUP BY app_name, highest_price
-)
-SELECT 
-	app_name,
-	highest_price AS app_price,
-	CASE WHEN highest_price::MONEY::NUMERIC <=1 THEN 10000
-	ELSE highest_price::MONEY::NUMERIC*10000::MONEY::NUMERIC END AS cost_to_purchase,
-	CASE WHEN rating <=0 THEN 1
-	WHEN rating <=1 THEN 3
-	WHEN rating <=2 THEN 5
-	WHEN rating <=3 THEN 7
-	WHEN rating <=4 THEN 9
-	ELSE 11 END AS expected_lifespan_years
-FROM one
 
 
 
