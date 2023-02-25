@@ -372,7 +372,7 @@ FROM app_store_apps as a
 JOIN play_store_apps as p
 ON a.name = p.name
 ),
---CTE number 3 builds our expected lifespan column based on the rating, we also use a subquery to join a table that returns app names that are in both stores
+--CTE number 3 builds our expected lifespan column based on the rating, we also use a subquery to join a table that returns app names that are in both stores. The a where clause filters on genre that was deduced using CTE one and a separate select statement toward the top.
 three AS (
 SELECT 
 	system,
@@ -408,14 +408,11 @@ SELECT
 	app_price,
 	cost_to_purchase,
 	expected_lifespan_years,
-	((12*10000)*expected_lifespan_years)::MONEY-(12000*expected_lifespan_years)::MONEY AS potential_revenue_over_lifespan
+	((12*10000)*expected_lifespan_years)::MONEY-(12000*expected_lifespan_years)::MONEY-cost_to_purchase AS potential_revenue_over_lifespan
 FROM three
+LIMIT 10;
 
 	
-	
-
-
-
 
 -- #### 2. Assumptions
 
@@ -467,11 +464,23 @@ WHERE rating IS NOT NULL;
 
 -- a. Develop some general recommendations as to the price range, genre, content rating, or anything else for apps that the company should target.
 
-Recommendations for App Trader:
-There are ~500 apps that live in both app stores. Of those ~500, 
+--The recommended price range is $0 - $1 as there are numerous well rated games at this price point and becuase it costs the same price to advertise on an expensive app as it does on a economically priced app, we suggest purchasing the lower cost apps. We also recommend purchasing apps that live in both stores since this also extends the ROI on advertising costs as it costs the same $1,000 to advert on both apps.
+
+-- Recommendations for App Trader:
+--These are recommend apps as they are top rated, low cost, have a long life expectancy, and generate revenue over 1 million.
+
 
 -- b. Develop a Top 10 List of the apps that App Trader should buy.
-
+-- "Egg, Inc."							5.0	"$0.00"	"$10,000.00"	11	"$1,188,000.00"
+-- "Geometry Dash Lite"					5.0	"$0.00"	"$10,000.00"	11	"$1,188,000.00"
+-- "PewDiePie's Tuber Simulator"		5.0	"$0.00"	"$10,000.00"	11	"$1,188,000.00"
+-- "Fandango Movies - Times + Tickets"	4.6	"$0.00"	"$10,000.00"	11	"$1,188,000.00"
+-- "TED"								4.6	"$0.00"	"$10,000.00"	11	"$1,188,000.00"
+-- "aa"									4.5	"$0.00"	"$10,000.00"	11	"$1,188,000.00"
+-- "Adobe Illustrator Draw"				4.5	"$0.00"	"$10,000.00"	11	"$1,188,000.00"
+-- "Agar.io"							4.5	"$0.00"	"$10,000.00"	11	"$1,188,000.00"
+-- "Angry Birds Blast"					4.5	"$0.00"	"$10,000.00"	11	"$1,188,000.00"
+-- "Angry Birds Epic RPG"				4.5	"$0.00"	"$10,000.00"	11	"$1,188,000.00"
 
 
 
