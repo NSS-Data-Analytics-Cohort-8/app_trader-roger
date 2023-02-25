@@ -52,42 +52,8 @@ WHERE rating IS NOT NULL
 -- "BI News"						"$0.00"	5.0	"Everyone"
 -- "Railroad Radio Vancouver BC"	"$0.00"	5.0	"Teen"
 
------FIND TOP RATED CONTENT RATINGS PER STORE-----
 
-SELECT 
-	DISTINCT content_rating,
-	rating
-FROM app_store_apps
-WHERE rating IS NOT NULL
-ORDER BY rating DESC
-LIMIT 10;
-
------THE APP STORES TOP CONTENT RATING BY RATING BELOW, THIS SHOULD POINT TOWARD THE AGE GROUP AND TYPE OF APPS WE'D RECOMMEND-----
--- "12+" 5.0
--- "9+"	5.0
--- "17+" 5.0
--- "4+"	5.0
--- "9+"	4.5
-
-SELECT
-	DISTINCT content_rating,
-	rating
-FROM play_store_apps
-WHERE rating IS NOT NULL
-ORDER BY rating DESC
-LIMIT 10;
-
------THE PLAY STORES TOP CONTENT RATING BY RATING BELOW, THIS SHOULD POINT TOWARD THE AGE GROUP AND TYPE OF APPS WE'D RECOMMEND-----
--- "Everyone" 5.0
--- "Mature 17+"	5.0
--- "Teen"	5.0
--- "Everyone 10+" 5.0
--- "Everyone"	4.9
-
-												----------CONCLUSIONS----------
--- Both app stores have top rating for games that are meant for a wide range of ages, though the playstore leans toward adult content
-
------CTE TO DRILL DOWN ON GENRE -----
+-----CTE TO DRILL DOWN ON POPULAR GENRE -----
 WITH one AS 
 (
 	SELECT
@@ -118,21 +84,20 @@ GROUP BY primary_genre
 ORDER BY app_count DESC
 -----OUTPUT-----
 --The output includes 122 distinct genres across both stores. The output includes the genres that are rated >=4 and we also see the count of apps in these genres
--- 3861	"Games"
--- 1006	"Entertainment"
--- 883	"Education"
--- 720	"Tools"
--- 476	"Productivity"
+-- 2868	"Games"
+-- 655	"Education"
+-- 613	"Entertainment"
+-- 504	"Tools"
+-- 435	"Productivity"
 
 
-
------LOOK AT TOP RATED APPS WITH RATING >=4-----
+-----LOOK AT TOP RATED APPS WITH RATING >=4 IN ABOVE GENRES-----
 WITH one AS 
 (
 	SELECT
 		'appstore' as system,
 		name, 
-		CAST(price AS MONEY) as price,
+		price::MONEY as price,
 		primary_genre,
 		rating
 	FROM app_store_apps
@@ -142,7 +107,7 @@ UNION ALL
 	SELECT
 		'playstore' as system,
 		name,
-		CAST(price AS MONEY) as price,
+		price::MONEY as price,
 		genres,
 		rating
 	FROM play_store_apps
@@ -161,12 +126,11 @@ ORDER BY rating DESC;
 -----OUTPUT-----
 --a list of 5,075 games between both stores that are rated 4+ stars.
 
-WITH one AS 
 (
 	SELECT
 		'appstore' as system,
 		name, 
-		CAST(price AS MONEY) as price,
+		price::MONEY as price,
 		primary_genre,
 		rating
 	FROM app_store_apps
@@ -176,7 +140,7 @@ UNION ALL
 	SELECT
 		'playstore' as system,
 		name,
-		CAST(price AS MONEY) as price,
+		price::MONEY as price,
 		genres,
 		rating
 	FROM play_store_apps
@@ -192,13 +156,12 @@ WHERE primary_genre IN
 GROUP BY system;
 -----OUTPUT-----
 --Of the 5,075 apps between both stores, 3538 live on the app store and 1537 live in the playstore. Next step is to see which of these 5,075 live in both stores. 
-
-WITH one AS 
+WITH one AS
 (
 	SELECT
 		'appstore' as system,
-		name,
-		CAST(price AS MONEY) as price,
+		name, 
+		price::MONEY as price,
 		primary_genre,
 		rating
 	FROM app_store_apps
@@ -208,13 +171,14 @@ UNION ALL
 	SELECT
 		'playstore' as system,
 		name,
-		CAST(price AS MONEY) as price,
+		price::MONEY as price,
 		genres,
 		rating
 	FROM play_store_apps
 	WHERE rating >=4 
 	AND rating IS NOT NULL
 )
+
 SELECT
 	name,
 	price::MONEY
@@ -232,12 +196,12 @@ WHERE primary_genre IN
 --Of the 5,075 apps that are rated >=4 and are in genres with the biggest pool of apps to choose from, there are 269 that live in both app stores.
 
 -----NOW BRINGING IN THE APPS THAT COST BETWEEN $0 - $1-----
-WITH one AS 
+WITH one AS
 (
 	SELECT
 		'appstore' as system,
-		name,
-		CAST(price AS MONEY) as price,
+		name, 
+		price::MONEY as price,
 		primary_genre,
 		rating
 	FROM app_store_apps
@@ -247,7 +211,7 @@ UNION ALL
 	SELECT
 		'playstore' as system,
 		name,
-		CAST(price AS MONEY) as price,
+		price::MONEY as price,
 		genres,
 		rating
 	FROM play_store_apps
@@ -369,10 +333,37 @@ ORDER BY rating DESC;
 -----OUTPUT-----
 --These results shows apps that are in both app stores, their purchase price for App Trader, the monthly revenue, the annual revenue, and the lifetime revenue. The life time of these apps is 11 years since they're all rated 5 stars, so the annual cost is multiplied by 11 to get the lifetime revenue. This list is less than 10 so it will require additional computing to bring in another 4 apps to supply a top 10 recommendation list.
 
----playing around with a table expression to filter---
-AND two AS (
+---first CTE filters joins both tables and filters them to include apps that are rated 4+, removes null ratings, and builds a column that calculates the cost of purchase for App Trader using a case statement
+WITH one AS 
+(
+	SELECT
+		'app_store' as system,
+		name, 
+		CASE WHEN price <= 1 THEN 10000
+		ELSE (price * 10000) END AS cost,
+		price::NUMERIC,
+		primary_genre,
+		rating
+	FROM app_store_apps
+	WHERE rating >=4 
+	AND rating IS NOT NULL
+UNION ALL
+	SELECT
+		'play_store' as system,
+		name,
+		CASE WHEN price::MONEY::NUMERIC <= 1 THEN 10000
+		ELSE (price::MONEY::NUMERIC * 10000) END AS cost,
+		price::NUMERIC,
+		genres,
+		rating
+	FROM play_store_apps
+	WHERE rating >=4 
+	AND rating IS NOT NULL
+),
+--The seconds CTE focuses on finding the highest price between the app stores so that we can select the highest price in our main query later on
+two AS (
 SELECT
-	a.name,
+	a.name as name,
 	a.price::MONEY as app_price,
 	p.price::MONEY as play_price,
 	CASE WHEN a.price::MONEY > p.price::MONEY THEN a.price::MONEY
@@ -380,7 +371,50 @@ SELECT
 FROM app_store_apps as a
 JOIN play_store_apps as p
 ON a.name = p.name
+),
+--CTE number 3 builds our expected lifespan column based on the rating, we also use a subquery to join a table that returns app names that are in both stores
+three AS (
+SELECT 
+	system,
+	t.name as name,
+	highest_price AS app_price,
+	cost::MONEY AS cost_to_purchase,
+	rating,
+	CASE WHEN rating <=0 THEN 1
+	WHEN rating <=1 THEN 3
+	WHEN rating <=2 THEN 5
+	WHEN rating <=3 THEN 7
+	WHEN rating <=4 THEN 9
+	ELSE 11 END AS expected_lifespan_years
+FROM one as o
+JOIN two as t
+ON o.name = t.name
+WHERE t.name IN
+		(SELECT a.name
+		FROM app_store_apps as a
+		JOIN play_store_apps as p
+		ON a.name = p.name
+		)
+	AND primary_genre IN 
+	('Entertainment', 'Games', 'Education', 'Tools', 'Productivity')
+	AND cost::MONEY::NUMERIC < 11000
+GROUP BY system, t.name, highest_price, cost, rating
+ORDER BY rating DESC
 )
+--Finally, the main query grabs the name of the app, rating, app_price based on our higher price table, cost to purchase
+SELECT 
+	name,
+	rating,
+	app_price,
+	cost_to_purchase,
+	expected_lifespan_years,
+	((12*10000)*expected_lifespan_years)::MONEY-(12000*expected_lifespan_years)::MONEY AS potential_revenue_over_lifespan
+FROM three
+
+	
+	
+
+
 
 
 -- #### 2. Assumptions
